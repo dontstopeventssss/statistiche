@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DON'T STOP - Dashboard Admin</title>
+    <!-- Firebase SDK v9 (Compatible) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+
+    <style>
+        :root {
+            --color-cream-50: rgba(252, 252, 249, 1);
+            --color-cream-100: rgba(255, 255, 253, 1);
+            --color-slate-900: rgba(19, 52, 59, 1);
+            --color-slate-500: rgba(98, 108, 113, 1);
+            --color-teal-500: rgba(33, 128, 141, 1);
+            --color-teal-600: rgba(29, 116, 128, 1);
+            --color-red-500: rgba(192, 21, 47, 1);
+            --color-orange-500: rgba(168, 75, 47, 1);
+            --color-background: var(--color-cream-50);
+            --color-surface: var(--color-cream-100);
+            --color-text: var(--color-slate-900);
+            --color-text-secondary: var(--color-slate-500);
+            --color-primary: var(--color-teal-500);
+            --color-success: var(--color-teal-500);
+            --color-error: var(--color-red-500);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-background: rgba(31, 33, 33, 1);
+                --color-surface: rgba(38, 40, 40, 1);
+                --color-text: rgba(245, 245, 245, 1);
+                --color-text-secondary: rgba(167, 169, 169, 0.7);
+                --color-primary: rgba(50, 184, 198, 1);
+                --color-success: rgba(50, 184, 198, 1);
+                --color-error: rgba(255, 84, 89, 1);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--color-background);
+            color: var(--color-text);
+        }
+
+        body {
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin: 0;
+        }
+
+        .subtitle {
+            color: var(--color-text-secondary);
+            margin: 5px 0 0 0;
+            font-size: 14px;
+        }
+
+        .logout-btn {
+            background: var(--color-error);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 150ms;
+        }
+
+        .logout-btn:hover {
+            background: rgba(192, 21, 47, 0.8);
+        }
+
+        .card {
+            background-color: var(--color-surface);
+            border-radius: 12px;
+            border: 1px solid rgba(94, 82, 64, 0.12);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        h2 {
+            margin: 0 0 15px 0;
+            font-size: 20px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: rgba(33, 128, 141, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--color-primary);
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--color-text-secondary);
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 150ms;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--color-teal-600);
+        }
+
+        .btn-secondary {
+            background: rgba(94, 82, 64, 0.12);
+            color: var(--color-text);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(94, 82, 64, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(94, 82, 64, 0.2);
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: var(--color-background);
+            color: var(--color-text);
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(33, 128, 141, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead {
+            background: rgba(94, 82, 64, 0.12);
+        }
+
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(94, 82, 64, 0.12);
+        }
+
+        tr:hover {
+            background: rgba(94, 82, 64, 0.06);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(33, 128, 141, 0.2);
+            color: var(--color-success);
+        }
+
+        .badge.pending {
+            background: rgba(255, 193, 7, 0.2);
+            color: rgba(255, 193, 7, 1);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--color-text-secondary);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--color-surface);
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+        }
+
+        .error-message {
+            background: rgba(192, 21, 47, 0.15);
+            border-left: 4px solid var(--color-error);
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            color: var(--color-error);
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: rgba(33, 128, 141, 0.15);
+            border-left: 4px solid var(--color-success);
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            color: var(--color-success);
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>DON'T STOP</h1>
+                <p class="subtitle">Dashboard Admin</p>
+            </div>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <!-- STATISTICHE -->
+        <div class="card">
+            <h2>📊 Statistiche Evento</h2>
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-number" id="totalRegistrations">0</div>
+                    <div class="stat-label">Iscritti Totali</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="totalPresenti">0</div>
+                    <div class="stat-label">Presenti</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="percentagePresent">0%</div>
+                    <div class="stat-label">Partecipazione</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GESTIONE LISTE -->
+        <div class="card">
+            <h2>⚙️ Gestione Liste</h2>
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+            
+            <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-bottom: 15px;">
+                <input type="text" id="newListName" placeholder="Nome lista (es. VIP, Studenti...)" />
+                <button class="btn btn-primary" onclick="addList()">Aggiungi Lista</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome Lista</th>
+                        <th>Iscritti</th>
+                        <th>Presenti</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody id="listTableBody">
+                    <tr>
+                        <td colspan="4" class="empty-state">Nessuna lista creata</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ELENCO ISCRITTI -->
+        <div class="card">
+            <h2>👥 Elenco Iscritti</h2>
+            
+            <div style="margin-bottom: 15px;">
+                <button class="btn btn-secondary" onclick="exportCSV()">📥 Esporta CSV</button>
+                <button class="btn btn-secondary" onclick="resetAllCheckins()">🔄 Resetta Check-in</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Cognome</th>
+                        <th>Email</th>
+                        <th>Lista</th>
+                        <th>Stato</th>
+                    </tr>
+                </thead>
+                <tbody id="registrationTableBody">
+                    <tr>
+                        <td colspan="5" class="empty-state">Nessun iscritto</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let db = null;
+        let allRegistrations = [];
+        let allLists = [];
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC0xr80RFF0-gXPd4bhA0VV9TLBPOYW8ps",
+            authDomain: "app-ticket-evento.firebaseapp.com",
+            databaseURL: "https://app-ticket-evento-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "app-ticket-evento",
+            storageBucket: "app-ticket-evento.firebasestorage.app",
+            messagingSenderId: "182807045888",
+            appId: "1:182807045888:web:3bcea8e82192c5f61a75e5"
+        };
+
+        // Inizializza Firebase
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+
+        // Carica dati all'apertura
+        window.addEventListener('DOMContentLoaded', () => {
+            loadLists();
+            loadRegistrations();
+        });
+
+        function loadLists() {
+            db.ref('config/lists').on('value', (snapshot) => {
+                allLists = [];
+                const data = snapshot.val();
+                if (data) {
+                    Object.entries(data).forEach(([key, value]) => {
+                        allLists.push({ id: key, name: value });
+                    });
+                }
+                updateListsTable();
+                updateStats();
+            });
+        }
+
+        function loadRegistrations() {
+            db.ref('registrations').on('value', (snapshot) => {
+                allRegistrations = [];
+                const data = snapshot.val();
+                if (data) {
+                    Object.entries(data).forEach(([key, value]) => {
+                        allRegistrations.push({ id: key, ...value });
+                    });
+                }
+                updateRegistrationsTable();
+                updateStats();
+            });
+        }
+
+        function addList() {
+            const listName = document.getElementById('newListName').value.trim();
+            if (!listName) {
+                showError('Inserisci un nome per la lista');
+                return;
+            }
+
+            db.ref('config/lists/' + listName).set(listName)
+                .then(() => {
+                    document.getElementById('newListName').value = '';
+                    showSuccess('Lista aggiunta con successo!');
+                })
+                .catch(error => {
+                    showError('Errore: ' + error.message);
+                });
+        }
+
+        function deleteList(listId) {
+            if (confirm('Sei sicuro di voler eliminare questa lista?')) {
+                db.ref('config/lists/' + listId).remove()
+                    .then(() => {
+                        showSuccess('Lista eliminata!');
+                    })
+                    .catch(error => {
+                        showError('Errore: ' + error.message);
+                    });
+            }
+        }
+
+        function updateListsTable() {
+            const tbody = document.getElementById('listTableBody');
+            if (allLists.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Nessuna lista creata</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = allLists.map(list => {
+                const listRegistrations = allRegistrations.filter(r => r.list === list.name);
+                const checkedIn = listRegistrations.filter(r => r.checkedIn).length;
+                return `
+                    <tr>
+                        <td>${list.name}</td>
+                        <td>${listRegistrations.length}</td>
+                        <td>${checkedIn}</td>
+                        <td>
+                            <button class="btn btn-secondary" onclick="deleteList('${list.id}')" style="padding: 5px 10px; font-size: 12px;">Elimina</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateRegistrationsTable() {
+            const tbody = document.getElementById('registrationTableBody');
+            if (allRegistrations.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nessun iscritto</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = allRegistrations.map(reg => {
+                const status = reg.checkedIn ? '✓ Presente' : 'In attesa';
+                const badgeClass = reg.checkedIn ? 'badge' : 'badge pending';
+                return `
+                    <tr>
+                        <td>${reg.firstName || reg.fullName?.split(' ')[0] || ''}</td>
+                        <td>${reg.lastName || reg.fullName?.split(' ')[1] || ''}</td>
+                        <td>${reg.email}</td>
+                        <td>${reg.list}</td>
+                        <td><span class="${badgeClass}">${status}</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateStats() {
+            const total = allRegistrations.length;
+            const checkedIn = allRegistrations.filter(r => r.checkedIn).length;
+            const percentage = total > 0 ? Math.round((checkedIn / total) * 100) : 0;
+
+            document.getElementById('totalRegistrations').textContent = total;
+            document.getElementById('totalPresenti').textContent = checkedIn;
+            document.getElementById('percentagePresent').textContent = percentage + '%';
+        }
+
+        function exportCSV() {
+            if (allRegistrations.length === 0) {
+                showError('Nessun dato da esportare');
+                return;
+            }
+
+            const headers = ['Nome', 'Cognome', 'Email', 'Lista', 'Stato', 'Check-in'];
+            const rows = allRegistrations.map(r => [
+                r.firstName || r.fullName?.split(' ')[0] || '',
+                r.lastName || r.fullName?.split(' ')[1] || '',
+                r.email,
+                r.list,
+                r.checkedIn ? 'Presente' : 'In attesa',
+                r.checkedInAt || ''
+            ]);
+
+            const csv = [headers, ...rows].map(row => 
+                row.map(cell => `"${cell}"`).join(',')
+            ).join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'iscritti_evento.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function resetAllCheckins() {
+            if (confirm('Sei sicuro di voler resettare tutti i check-in? Questa azione non può essere annullata.')) {
+                const updates = {};
+                allRegistrations.forEach(reg => {
+                    updates['registrations/' + reg.id + '/checkedIn'] = false;
+                    updates['registrations/' + reg.id + '/checkedInAt'] = null;
+                });
+
+                db.ref().update(updates)
+                    .then(() => {
+                        showSuccess('Check-in resettati!');
+                    })
+                    .catch(error => {
+                        showError('Errore: ' + error.message);
+                    });
+            }
+        }
+
+        function logout() {
+            if (confirm('Sei sicuro di voler uscire?')) {
+                window.location.href = 'index.html';
+            }
+        }
+
+        function showError(message) {
+            const el = document.getElementById('errorMessage');
+            el.textContent = message;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 5000);
+        }
+
+        function showSuccess(message) {
+            const el = document.getElementById('successMessage');
+            el.textContent = message;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 5000);
+        }
+    </script>
+</body>
+</html>
