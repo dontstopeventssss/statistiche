@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DON'T STOP - Dashboard Admin</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+    
+    <style>
+        :root {
+            --color-cream-50: rgba(252, 252, 249, 1);
+            --color-cream-100: rgba(255, 255, 253, 1);
+            --color-slate-900: rgba(19, 52, 59, 1);
+            --color-slate-500: rgba(98, 108, 113, 1);
+            --color-teal-500: rgba(33, 128, 141, 1);
+            --color-teal-600: rgba(29, 116, 128, 1);
+            --color-red-500: rgba(192, 21, 47, 1);
+            --color-background: var(--color-cream-50);
+            --color-surface: var(--color-cream-100);
+            --color-text: var(--color-slate-900);
+            --color-text-secondary: var(--color-slate-500);
+            --color-primary: var(--color-teal-500);
+            --color-success: var(--color-teal-500);
+            --color-error: var(--color-red-500);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-background: rgba(31, 33, 33, 1);
+                --color-surface: rgba(38, 40, 40, 1);
+                --color-text: rgba(245, 245, 245, 1);
+                --color-text-secondary: rgba(167, 169, 169, 0.7);
+                --color-primary: rgba(50, 184, 198, 1);
+                --color-success: rgba(50, 184, 198, 1);
+                --color-error: rgba(255, 84, 89, 1);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--color-background);
+            color: var(--color-text);
+        }
+
+        body {
+            padding: 16px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .login-screen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        .login-card {
+            background-color: var(--color-surface);
+            border-radius: 12px;
+            border: 1px solid rgba(94, 82, 64, 0.12);
+            padding: 48px;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .login-card h1 {
+            margin: 0 0 8px 0;
+            text-align: center;
+            font-size: 2em;
+        }
+
+        .login-card p {
+            text-align: center;
+            color: var(--color-text-secondary);
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid rgba(94, 82, 64, 0.2);
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: var(--color-background);
+            color: var(--color-text);
+            font-family: inherit;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(33, 128, 141, 0.1);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 150ms;
+            border: none;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--color-teal-600);
+        }
+
+        .btn-secondary {
+            background: rgba(94, 82, 64, 0.12);
+            color: var(--color-text);
+            margin-top: 12px;
+            width: auto;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(94, 82, 64, 0.2);
+        }
+
+        .btn-danger {
+            background: var(--color-error);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: rgba(192, 21, 47, 0.9);
+        }
+
+        .error-message {
+            display: none;
+            background: rgba(192, 21, 47, 0.15);
+            border-left: 4px solid var(--color-error);
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            color: var(--color-error);
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .dashboard-screen {
+            display: none;
+        }
+
+        .dashboard-screen.active {
+            display: block;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin: 0 0 8px 0;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--color-text-secondary);
+            margin-bottom: 24px;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+
+        .header-admin {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .logout-btn {
+            background: var(--color-error);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .card {
+            background-color: var(--color-surface);
+            border-radius: 12px;
+            border: 1px solid rgba(94, 82, 64, 0.12);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        h2 {
+            margin: 0 0 20px 0;
+            font-size: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-box {
+            background: rgba(33, 128, 141, 0.1);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--color-primary);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 600;
+            color: var(--color-primary);
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .attendance-bar {
+            width: 100%;
+            height: 24px;
+            background: rgba(94, 82, 64, 0.12);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+
+        .attendance-fill {
+            height: 100%;
+            background: var(--color-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            transition: width 300ms ease;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            border: 1px solid rgba(94, 82, 64, 0.2);
+            background: transparent;
+            cursor: pointer;
+            transition: all 150ms;
+        }
+
+        .filter-btn.active {
+            background: var(--color-primary);
+            color: white;
+            border-color: var(--color-primary);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        thead {
+            background: rgba(94, 82, 64, 0.12);
+        }
+
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(94, 82, 64, 0.12);
+        }
+
+        tr:hover {
+            background: rgba(94, 82, 64, 0.06);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(33, 128, 141, 0.2);
+            color: var(--color-success);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 16px;
+            color: var(--color-text-secondary);
+        }
+
+        .list-management {
+            background: rgba(33, 128, 141, 0.1);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--color-primary);
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--color-surface);
+            border-radius: 6px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(94, 82, 64, 0.12);
+        }
+
+        .list-emoji {
+            font-size: 20px;
+            min-width: 30px;
+        }
+
+        .list-name {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .btn-remove {
+            background: var(--color-error);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .add-list-form {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .add-list-form input {
+            flex: 1;
+            min-width: 150px;
+            padding: 8px 12px;
+            border: 1px solid rgba(94, 82, 64, 0.2);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .add-list-form button {
+            padding: 8px 16px;
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <div id="loginScreen" class="login-screen">
+        <div class="login-card">
+            <h1>🛑 DON'T STOP</h1>
+            <p>Dashboard Admin</p>
+            
+            <div class="error-message" id="loginError">Password non corretta</div>
+
+            <form onsubmit="loginAdmin(event)">
+                <div class="form-group">
+                    <label for="adminPassword">Password Admin *</label>
+                    <input type="password" id="adminPassword" required autofocus>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Accedi</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="dashboardScreen" class="dashboard-screen">
+        <div class="container">
+            <div class="header-admin">
+                <div>
+                    <h1>🛑 DON'T STOP</h1>
+                    <p class="subtitle">Dashboard Admin</p>
+                </div>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+
+            <div class="card">
+                <h2>📊 Statistiche Evento</h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-number" id="totalRegistered">0</div>
+                        <div class="stat-label">Iscritti Totali</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="totalCheckedin">0</div>
+                        <div class="stat-label">Presenti</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="attendancePercentage">0%</div>
+                        <div class="stat-label">Partecipazione</div>
+                    </div>
+                </div>
+
+                <div>
+                    <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; color: var(--color-text-secondary);">Barra Presenze</div>
+                    <div class="attendance-bar">
+                        <div class="attendance-fill" id="attendanceBar" style="width: 0%">0%</div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-secondary btn-danger" onclick="exportData()">📥 Esporta CSV</button>
+                    <button class="btn btn-secondary btn-danger" onclick="clearAllData()">🗑️ Azzera Dati</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>👥 Elenco Iscritti</h2>
+
+                <div style="margin-bottom: 16px;">
+                    <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; color: var(--color-text-secondary);">Filtra per lista</div>
+                    <div class="filter-controls" id="filterControls"></div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Cognome</th>
+                                <th>Lista</th>
+                                <th>Email</th>
+                                <th>Stato</th>
+                            </tr>
+                        </thead>
+                        <tbody id="registrantsList">
+                            <tr>
+                                <td colspan="5" class="empty-state">
+                                    <div>👤 Nessun iscritto ancora</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>⚙️ Gestione Liste</h2>
+                <p style="color: var(--color-text-secondary); font-size: 14px; margin-bottom: 16px;">Nome lista *  | Emoji (opzionale)</p>
+
+                <div class="add-list-form">
+                    <input type="text" id="newListName" placeholder="Nome lista (es: VIP LOUNGE)" style="flex: 2;">
+                    <input type="text" id="newListEmoji" placeholder="Emoji (opzionale)" maxlength="2" style="flex: 0 1 120px;">
+                    <button onclick="addNewList()" class="btn btn-primary" style="flex: 0 0 auto;">Aggiungi</button>
+                </div>
+
+                <div class="list-management">
+                    <div id="listContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ADMIN_PASSWORD = "123stupido";
+        let isLoggedIn = false;
+        let allRegistrations = [];
+        let allLists = {};
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC0xr80RFF0-gXPd4bhA0VV9TLBPOYW8ps",
+            authDomain: "app-ticket-evento.firebaseapp.com",
+            databaseURL: "https://app-ticket-evento-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "app-ticket-evento",
+            storageBucket: "app-ticket-evento.firebasestorage.app",
+            messagingSenderId: "182807045888",
+            appId: "1:182807045888:web:3bcea8e82192c5f61a75e5"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        function loginAdmin(event) {
+            event.preventDefault();
+            const password = document.getElementById('adminPassword').value;
+
+            if (password === ADMIN_PASSWORD) {
+                isLoggedIn = true;
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboardScreen').classList.add('active');
+                document.getElementById('adminPassword').value = '';
+                document.getElementById('loginError').classList.remove('show');
+                loadData();
+                setInterval(loadData, 3000);
+            } else {
+                document.getElementById('loginError').classList.add('show');
+                document.getElementById('adminPassword').value = '';
+            }
+        }
+
+        function logout() {
+            isLoggedIn = false;
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('dashboardScreen').classList.remove('active');
+            document.getElementById('adminPassword').value = '';
+        }
+
+        function loadData() {
+            if (!isLoggedIn) return;
+
+            database.ref('registrations').once('value', (snapshot) => {
+                allRegistrations = [];
+                const data = snapshot.val();
+                if (data) {
+                    Object.entries(data).forEach(([key, value]) => {
+                        allRegistrations.push(value);
+                    });
+                }
+                updateStatistics();
+            });
+
+            database.ref('config/lists').once('value', (snapshot) => {
+                allLists = snapshot.val() || {};
+                updateListsUI();
+            });
+        }
+
+        function updateStatistics() {
+            const checkedIn = allRegistrations.filter(r => r.checkedIn);
+            const totalRegistered = allRegistrations.length;
+            const totalCheckedIn = checkedIn.length;
+            const attendancePercent = totalRegistered > 0 ? Math.round((totalCheckedIn / totalRegistered) * 100) : 0;
+            const lists = [...new Set(allRegistrations.map(r => r.list))].sort();
+
+            document.getElementById('totalRegistered').textContent = totalRegistered;
+            document.getElementById('totalCheckedin').textContent = totalCheckedIn;
+            document.getElementById('attendancePercentage').textContent = attendancePercent + '%';
+
+            const bar = document.getElementById('attendanceBar');
+            bar.style.width = attendancePercent + '%';
+            bar.textContent = attendancePercent + '%';
+
+            const filterControls = document.getElementById('filterControls');
+            filterControls.innerHTML = '<button class="filter-btn active" onclick="filterRegistrants(null, this)">Tutti</button>';
+            lists.forEach(list => {
+                filterControls.innerHTML += `<button class="filter-btn" onclick="filterRegistrants('${list}', this)">${list}</button>`;
+            });
+
+            filterRegistrants(null);
+        }
+
+        function filterRegistrants(selectedList, btn) {
+            if (btn) {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+
+            const filtered = selectedList ? allRegistrations.filter(r => r.list === selectedList) : allRegistrations;
+            const tbody = document.getElementById('registrantsList');
+            
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="empty-state">👤 Nessun iscritto</td></tr>`;
+            } else {
+                tbody.innerHTML = filtered.map(r => {
+                    const [firstName, ...lastNameParts] = r.fullName.split(' ');
+                    const lastName = lastNameParts.join(' ');
+                    const statusBadge = r.checkedIn 
+                        ? '<span class="status-badge">✓ Presente</span>'
+                        : '<span class="status-badge" style="background: rgba(255, 193, 7, 0.2); color: rgba(255, 193, 7, 1);">⏳ In attesa</span>';
+                    
+                    return `
+                        <tr>
+                            <td>${firstName}</td>
+                            <td>${lastName}</td>
+                            <td>${r.list}</td>
+                            <td>${r.email}</td>
+                            <td>${statusBadge}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        function updateListsUI() {
+            const container = document.getElementById('listContainer');
+            
+            if (Object.keys(allLists).length === 0) {
+                container.innerHTML = '<p style="color: var(--color-text-secondary); text-align: center;">Nessuna lista. Aggiungine una!</p>';
+                return;
+            }
+
+            container.innerHTML = Object.entries(allLists).map(([key, list]) => `
+                <div class="list-item">
+                    <div class="list-emoji">${list.emoji || '📋'}</div>
+                    <div class="list-name">${list.name}</div>
+                    <button class="btn-remove" onclick="removeList('${key}')">Rimuovi</button>
+                </div>
+            `).join('');
+        }
+
+        function addNewList() {
+            const name = document.getElementById('newListName').value.trim();
+            const emoji = document.getElementById('newListEmoji').value.trim() || '📋';
+
+            if (!name) {
+                alert('Inserisci il nome della lista');
+                return;
+            }
+
+            const listKey = name.toLowerCase().replace(/\s+/g, '-');
+            const listData = {
+                name: name,
+                emoji: emoji
+            };
+
+            database.ref('config/lists/' + listKey).set(listData)
+                .then(() => {
+                    document.getElementById('newListName').value = '';
+                    document.getElementById('newListEmoji').value = '';
+                    loadData();
+                })
+                .catch(error => {
+                    console.error('Errore:', error);
+                    alert('Errore durante l\'aggiunta della lista');
+                });
+        }
+
+        function removeList(listKey) {
+            if (confirm('Rimuovere questa lista?')) {
+                database.ref('config/lists/' + listKey).remove().then(() => {
+                    loadData();
+                });
+            }
+        }
+
+        function exportData() {
+            const csv = [
+                ['Nome', 'Cognome', 'Email', 'Lista', 'Stato', 'Check-in'],
+                ...allRegistrations.map(r => {
+                    const [firstName, ...lastNameParts] = r.fullName.split(' ');
+                    const lastName = lastNameParts.join(' ');
+                    const stato = r.checkedIn ? 'Presente' : 'In attesa';
+                    return [firstName, lastName, r.email, r.list, stato, r.checkedInAt || '-'];
+                })
+            ]
+            .map(row => row.map(cell => `"${cell}"`).join(','))
+            .join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `dontstop-${new Date().toISOString().split('T')[0]}.csv`);
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function clearAllData() {
+            if (confirm('⚠️ Eliminerai TUTTI i dati!')) {
+                if (confirm('⚠️ ULTIMA CONFERMA')) {
+                    database.ref('registrations').remove().then(() => {
+                        loadData();
+                        alert('✅ Dati azzerati!');
+                    });
+                }
+            }
+        }
+    </script>
+</body>
+</html>
