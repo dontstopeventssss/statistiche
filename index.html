@@ -757,20 +757,31 @@
             document.getElementById('percentagePresent').textContent = percentage + '%';
         }
 
+        function formatRegistrationTime(timestamp) {
+            if (!timestamp) return '';
+            try {
+                const date = new Date(timestamp);
+                return date.toLocaleString('it-IT');
+            } catch (e) {
+                return timestamp;
+            }
+        }
+
         function exportCSV() {
             if (allRegistrations.length === 0) {
                 showError('Nessun dato da esportare');
                 return;
             }
 
-            const headers = ['Nome', 'Cognome', 'Email', 'Lista', 'Stato', 'Check-in'];
+            const headers = ['Nome', 'Cognome', 'Email', 'Lista', 'Stato', 'Check-in', 'Registrato'];
             const rows = allRegistrations.map(r => [
                 r.firstname || '',
                 r.lastname || '',
                 r.email,
                 r.list || '',
                 r.checkedin ? 'Presente' : 'In attesa',
-                r.checkedinat || ''
+                r.checkedinat || '',
+                formatRegistrationTime(r.registered_at) || ''
             ]);
 
             const csv = [headers, ...rows].map(row => 
