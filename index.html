@@ -379,7 +379,7 @@
             
             <div style="margin-bottom: 15px;">
                 <button class="btn btn-secondary" onclick="exportCSV()">📥 Esporta CSV</button>
-                <button class="btn btn-secondary" onclick="resetAllCheckins()">🔄 Resetta Check-in</button>
+                <button class="btn" style="background: var(--color-error); color: white;" onclick="resetAllCheckins()">🗑️ Cancella Tutto</button>
             </div>
 
             <table>
@@ -602,19 +602,19 @@
         }
 
         async function resetAllCheckins() {
-            if (confirm('Sei sicuro di voler resettare tutti i check-in? Questa azione non può essere annullata.')) {
+            if (confirm('Sei sicuro? Tutti i dati verranno eliminati permanentemente. Il QR code sarà rigenerato al prossimo evento.')) {
                 try {
                     const { error } = await supabase
                         .from('registrations')
-                        .update({ checkedin: false, checkedinat: null })
+                        .delete()
                         .gte('id', 0);
 
                     if (error) throw error;
                     
-                    showSuccess('Check-in resettati!');
+                    showSuccess('Tutti i dati eliminati! Database pulito per il prossimo evento.');
                     loadRegistrations();
                 } catch (error) {
-                    console.error('Errore reset check-in:', error);
+                    console.error('Errore reset database:', error);
                     showError('Errore: ' + error.message);
                 }
             }
