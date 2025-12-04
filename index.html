@@ -504,7 +504,6 @@
         const SUPABASE_URL = 'https://ucnftwqplawdxbwlxjah.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_I7mKsvBQoyAwHm2c3eU3Rg_Mym3uCxI';
         const ADMIN_PASSWORD = '123stupido';
-        const TIMEZONE = 'Europe/Rome';
         
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
@@ -758,26 +757,6 @@
             document.getElementById('percentagePresent').textContent = percentage + '%';
         }
 
-        // FUSO ORARIO ITALIANO
-        function formatRegistrationTime(timestamp) {
-            if (!timestamp) return '';
-            try {
-                const date = new Date(timestamp);
-                const formatter = new Intl.DateTimeFormat('it-IT', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    timeZone: TIMEZONE
-                });
-                return formatter.format(date);
-            } catch (e) {
-                return timestamp;
-            }
-        }
-
         function exportCSV() {
             if (allRegistrations.length === 0) {
                 showError('Nessun dato da esportare');
@@ -792,7 +771,7 @@
                 r.list || '',
                 r.checkedin ? 'Presente' : 'In attesa',
                 r.checkedinat || '',
-                formatRegistrationTime(r.registered_at) || ''
+                r.registered_at || ''
             ]);
 
             const csv = [headers, ...rows].map(row => 
