@@ -526,7 +526,7 @@
 
             tbody.innerHTML = allLists.map(list => {
                 const listRegistrations = allRegistrations.filter(r => r.list === list.name);
-                const checkedIn = listRegistrations.filter(r => r.checkedIn).length;
+                const checkedIn = listRegistrations.filter(r => r.checkedin).length;
                 return `
                     <tr>
                         <td>${list.name}</td>
@@ -548,12 +548,12 @@
             }
 
             tbody.innerHTML = allRegistrations.map(reg => {
-                const status = reg.checkedIn ? '✓ Presente' : 'In attesa';
-                const badgeClass = reg.checkedIn ? 'badge' : 'badge pending';
+                const status = reg.checkedin ? '✓ Presente' : 'In attesa';
+                const badgeClass = reg.checkedin ? 'badge' : 'badge pending';
                 return `
                     <tr>
-                        <td>${reg.firstName || ''}</td>
-                        <td>${reg.lastName || ''}</td>
+                        <td>${reg.firstname || ''}</td>
+                        <td>${reg.lastname || ''}</td>
                         <td>${reg.email}</td>
                         <td>${reg.list || '-'}</td>
                         <td><span class="${badgeClass}">${status}</span></td>
@@ -564,7 +564,7 @@
 
         function updateStats() {
             const total = allRegistrations.length;
-            const checkedIn = allRegistrations.filter(r => r.checkedIn).length;
+            const checkedIn = allRegistrations.filter(r => r.checkedin).length;
             const percentage = total > 0 ? Math.round((checkedIn / total) * 100) : 0;
 
             document.getElementById('totalRegistrations').textContent = total;
@@ -580,12 +580,12 @@
 
             const headers = ['Nome', 'Cognome', 'Email', 'Lista', 'Stato', 'Check-in'];
             const rows = allRegistrations.map(r => [
-                r.firstName || '',
-                r.lastName || '',
+                r.firstname || '',
+                r.lastname || '',
                 r.email,
                 r.list || '',
-                r.checkedIn ? 'Presente' : 'In attesa',
-                r.checkedInAt || ''
+                r.checkedin ? 'Presente' : 'In attesa',
+                r.checkedinat || ''
             ]);
 
             const csv = [headers, ...rows].map(row => 
@@ -606,7 +606,7 @@
                 try {
                     const { error } = await supabase
                         .from('registrations')
-                        .update({ checkedIn: false, checkedInAt: null })
+                        .update({ checkedin: false, checkedinat: null })
                         .gte('id', 0);
 
                     if (error) throw error;
