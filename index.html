@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DON'T STOP - Dashboard Admin</title>
-    <!-- Firebase SDK v9 (Compatible) - jsDelivr CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/firebase@9/dist/firebase-app.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/firebase@9/dist/firebase-database.min.js"></script>
-
-
+    <!-- Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         :root {
@@ -405,114 +402,118 @@
     </div>
 
     <script>
-        let db = null;
+        const SUPABASE_URL = 'https://ucnftwqplawdxbwlxjah.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_I7mKsvBQoyAwHm2c3eU3Rg_Mym3uCxI';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
         let allRegistrations = [];
         let allLists = [];
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyC0xr80RFF0-gXPd4bhA0VV9TLBPOYW8ps",
-            authDomain: "app-ticket-evento.firebaseapp.com",
-            databaseURL: "https://app-ticket-evento-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "app-ticket-evento",
-            storageBucket: "app-ticket-evento.firebasestorage.app",
-            messagingSenderId: "182807045888",
-            appId: "1:182807045888:web:3bcea8e82192c5f61a75e5"
-        };
+        // Inizializza i dati al caricamento
+        window.addEventListener('DOMContentLoaded', () => {
+            loadLists();
+            loadRegistrations();
+            setupRealtimeListeners();
+        });
 
-        // Attendi che Firebase sia caricato
-        function waitForFirebase() {
-            if (typeof firebase === 'undefined') {
-                console.log('Aspettando Firebase...');
-                setTimeout(waitForFirebase, 100);
-                return;
-            }
-            console.log('Firebase caricato!');
-            setupFirebase();
+        // Listener in tempo reale per liste
+        function setupRealtimeListeners() {
+            const listChannel = supabase.channel('lists-changes')
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'lists' },
+                    (payload) => {
+                        loadLists();
+                    }
+                )
+                .subscribe();
+
+            const regChannel = supabase.channel('registrations-changes')
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'registrations' },
+                    (payload) => {
+                        loadRegistrations();
+                    }
+                )
+                .subscribe();
         }
 
-        // Inizializza Firebase quando è pronto
-        function setupFirebase() {
+        async function loadLists() {
             try {
-                firebase.initializeApp(firebaseConfig);
-                db = firebase.database();
-                console.log('Firebase inizializzato');
-                loadLists();
-                loadRegistrations();
-            } catch (error) {
-                console.error('Errore inizializzazione Firebase:', error);
-            }
-        }
+                const { data, error } = await supabase
+                    .from('lists')
+                    .select('*')
+                    .order('created_at', { ascending: true });
 
-        // Carica dati all'apertura
-        window.addEventListener('DOMContentLoaded', waitForFirebase);
-
-        function loadLists() {
-            if (!db) {
-                console.error('DB non inizializzato');
-                return;
-            }
-            db.ref('config/lists').on('value', (snapshot) => {
-                allLists = [];
-                const data = snapshot.val();
-                if (data) {
-                    Object.entries(data).forEach(([key, value]) => {
-                        allLists.push({ id: key, name: value });
-                    });
-                }
+                if (error) throw error;
+                allLists = data || [];
                 updateListsTable();
                 updateStats();
-            });
+            } catch (error) {
+                console.error('Errore caricamento liste:', error);
+                showError('Errore nel caricamento delle liste');
+            }
         }
 
-        function loadRegistrations() {
-            if (!db) {
-                console.error('DB non inizializzato');
-                return;
-            }
-            db.ref('registrations').on('value', (snapshot) => {
-                allRegistrations = [];
-                const data = snapshot.val();
-                if (data) {
-                    Object.entries(data).forEach(([key, value]) => {
-                        allRegistrations.push({ id: key, ...value });
-                    });
-                }
+        async function loadRegistrations() {
+            try {
+                const { data, error } = await supabase
+                    .from('registrations')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+                allRegistrations = data || [];
                 updateRegistrationsTable();
                 updateStats();
-            });
+            } catch (error) {
+                console.error('Errore caricamento iscritti:', error);
+                showError('Errore nel caricamento degli iscritti');
+            }
         }
 
-        function addList() {
+        async function addList() {
             const listName = document.getElementById('newListName').value.trim();
             if (!listName) {
                 showError('Inserisci un nome per la lista');
                 return;
             }
 
-            if (!db) {
-                showError('Database non inizializzato');
-                return;
-            }
+            try {
+                const { data, error } = await supabase
+                    .from('lists')
+                    .insert({ name: listName })
+                    .select();
 
-            db.ref('config/lists/' + listName).set(listName)
-                .then(() => {
-                    document.getElementById('newListName').value = '';
-                    showSuccess('Lista aggiunta con successo!');
-                })
-                .catch(error => {
-                    showError('Errore: ' + error.message);
-                });
+                if (error) throw error;
+                
+                document.getElementById('newListName').value = '';
+                showSuccess('Lista aggiunta con successo!');
+                loadLists();
+            } catch (error) {
+                console.error('Errore aggiunta lista:', error);
+                showError('Errore: ' + error.message);
+            }
         }
 
-        function deleteList(listId) {
+        async function deleteList(listId) {
             if (confirm('Sei sicuro di voler eliminare questa lista?')) {
-                db.ref('config/lists/' + listId).remove()
-                    .then(() => {
-                        showSuccess('Lista eliminata!');
-                    })
-                    .catch(error => {
-                        showError('Errore: ' + error.message);
-                    });
+                try {
+                    const { error } = await supabase
+                        .from('lists')
+                        .delete()
+                        .eq('id', listId);
+
+                    if (error) throw error;
+                    
+                    showSuccess('Lista eliminata!');
+                    loadLists();
+                } catch (error) {
+                    console.error('Errore eliminazione lista:', error);
+                    showError('Errore: ' + error.message);
+                }
             }
         }
 
@@ -532,7 +533,7 @@
                         <td>${listRegistrations.length}</td>
                         <td>${checkedIn}</td>
                         <td>
-                            <button class="btn btn-secondary" onclick="deleteList('${list.id}')" style="padding: 5px 10px; font-size: 12px;">Elimina</button>
+                            <button class="btn btn-secondary" onclick="deleteList(${list.id})" style="padding: 5px 10px; font-size: 12px;">Elimina</button>
                         </td>
                     </tr>
                 `;
@@ -551,10 +552,10 @@
                 const badgeClass = reg.checkedIn ? 'badge' : 'badge pending';
                 return `
                     <tr>
-                        <td>${reg.firstName || reg.fullName?.split(' ')[0] || ''}</td>
-                        <td>${reg.lastName || reg.fullName?.split(' ')[1] || ''}</td>
+                        <td>${reg.firstName || ''}</td>
+                        <td>${reg.lastName || ''}</td>
                         <td>${reg.email}</td>
-                        <td>${reg.list}</td>
+                        <td>${reg.list || '-'}</td>
                         <td><span class="${badgeClass}">${status}</span></td>
                     </tr>
                 `;
@@ -579,10 +580,10 @@
 
             const headers = ['Nome', 'Cognome', 'Email', 'Lista', 'Stato', 'Check-in'];
             const rows = allRegistrations.map(r => [
-                r.firstName || r.fullName?.split(' ')[0] || '',
-                r.lastName || r.fullName?.split(' ')[1] || '',
+                r.firstName || '',
+                r.lastName || '',
                 r.email,
-                r.list,
+                r.list || '',
                 r.checkedIn ? 'Presente' : 'In attesa',
                 r.checkedInAt || ''
             ]);
@@ -600,21 +601,22 @@
             window.URL.revokeObjectURL(url);
         }
 
-        function resetAllCheckins() {
+        async function resetAllCheckins() {
             if (confirm('Sei sicuro di voler resettare tutti i check-in? Questa azione non può essere annullata.')) {
-                const updates = {};
-                allRegistrations.forEach(reg => {
-                    updates['registrations/' + reg.id + '/checkedIn'] = false;
-                    updates['registrations/' + reg.id + '/checkedInAt'] = null;
-                });
+                try {
+                    const { error } = await supabase
+                        .from('registrations')
+                        .update({ checkedIn: false, checkedInAt: null })
+                        .gte('id', 0);
 
-                db.ref().update(updates)
-                    .then(() => {
-                        showSuccess('Check-in resettati!');
-                    })
-                    .catch(error => {
-                        showError('Errore: ' + error.message);
-                    });
+                    if (error) throw error;
+                    
+                    showSuccess('Check-in resettati!');
+                    loadRegistrations();
+                } catch (error) {
+                    console.error('Errore reset check-in:', error);
+                    showError('Errore: ' + error.message);
+                }
             }
         }
 
