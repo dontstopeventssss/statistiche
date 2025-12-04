@@ -358,6 +358,50 @@
         .success-message.show {
             display: block;
         }
+
+        /* STILI PER RAGGRUPPAMENTO */
+        .list-group {
+            margin-bottom: 24px;
+        }
+
+        .list-header {
+            background: rgba(33, 128, 141, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            font-size: 15px;
+        }
+
+        .status-subheader {
+            background: rgba(94, 82, 64, 0.08);
+            padding: 8px 12px;
+            margin: 12px 0 8px 0;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 13px;
+            color: var(--color-text-secondary);
+        }
+
+        .person-row {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(94, 82, 64, 0.12);
+            font-size: 13px;
+        }
+
+        .person-row:hover {
+            background: rgba(94, 82, 64, 0.06);
+        }
+
+        .person-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .person-email {
+            color: var(--color-text-secondary);
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -447,22 +491,12 @@
                 <button class="btn" style="background: var(--color-error); color: white;" onclick="resetAllCheckins()">🗑️ Cancella Tutto</button>
             </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>Cognome</th>
-                        <th>Email</th>
-                        <th>Lista</th>
-                        <th>Stato</th>
-                    </tr>
-                </thead>
-                <tbody id="registrationTableBody">
-                    <tr>
-                        <td colspan="5" class="empty-state">Nessun iscritto</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div id="registrationTableBody">
+                <div class="empty-state">
+                    <div style="font-size: 32px; margin-bottom: 10px;">👥</div>
+                    <div>Nessun iscritto</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -646,25 +680,71 @@
         }
 
         function updateRegistrationsTable() {
-            const tbody = document.getElementById('registrationTableBody');
+            const container = document.getElementById('registrationTableBody');
+            
             if (allRegistrations.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nessun iscritto</td></tr>';
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div style="font-size: 32px; margin-bottom: 10px;">👥</div>
+                        <div>Nessun iscritto</div>
+                    </div>
+                `;
                 return;
             }
 
-            tbody.innerHTML = allRegistrations.map(reg => {
-                const status = reg.checkedin ? '✓ Presente' : 'In attesa';
-                const badgeClass = reg.checkedin ? 'badge' : 'badge pending';
-                return `
-                    <tr>
-                        <td>${reg.firstname || ''}</td>
-                        <td>${reg.lastname || ''}</td>
-                        <td>${reg.email}</td>
-                        <td>${reg.list || '-'}</td>
-                        <td><span class="${badgeClass}">${status}</span></td>
-                    </tr>
-                `;
-            }).join('');
+            // Raggruppa per lista
+            const listGroups = {};
+            allRegistrations.forEach(reg => {
+                const listName = reg.list || 'Senza Lista';
+                if (!listGroups[listName]) {
+                    listGroups[listName] = { presenti: [], inattesa: [] };
+                }
+                if (reg.checkedin) {
+                    listGroups[listName].presenti.push(reg);
+                } else {
+                    listGroups[listName].inattesa.push(reg);
+                }
+            });
+
+            // Crea HTML raggruppato
+            let html = '';
+            Object.keys(listGroups).sort().forEach(listName => {
+                const group = listGroups[listName];
+                const totale = group.presenti.length + group.inattesa.length;
+                
+                html += `<div class="list-group">
+                    <div class="list-header">📋 ${listName} (${totale})</div>`;
+
+                // PRESENTI
+                if (group.presenti.length > 0) {
+                    html += `<div class="status-subheader">✓ Presenti (${group.presenti.length})</div>`;
+                    group.presenti.forEach(reg => {
+                        html += `
+                            <div class="person-row">
+                                <div class="person-name">${reg.firstname} ${reg.lastname}</div>
+                                <div class="person-email">${reg.email}</div>
+                            </div>
+                        `;
+                    });
+                }
+
+                // IN ATTESA
+                if (group.inattesa.length > 0) {
+                    html += `<div class="status-subheader">⏳ In attesa (${group.inattesa.length})</div>`;
+                    group.inattesa.forEach(reg => {
+                        html += `
+                            <div class="person-row">
+                                <div class="person-name">${reg.firstname} ${reg.lastname}</div>
+                                <div class="person-email">${reg.email}</div>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += `</div>`;
+            });
+
+            container.innerHTML = html;
         }
 
         function updateStats() {
