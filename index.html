@@ -757,7 +757,7 @@
             document.getElementById('percentagePresent').textContent = percentage + '%';
         }
 
-        // FORMATTAZIONE ORARIO: GG/MM HH:MM (senza secondi)
+        // FORMATTAZIONE ORARIO: GG/MM HH:MM (senza secondi) - Usa created_at
         function formatTimestamp(iso) {
             if (!iso) return '';
             try {
@@ -786,7 +786,7 @@
                 r.list || '',
                 r.checkedin ? 'Presente' : 'In attesa',
                 r.checkedinat || '',
-                formatTimestamp(r.registered_at)
+                formatTimestamp(r.created_at)
             ]);
 
             const csv = [headers, ...rows].map(row => 
