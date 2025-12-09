@@ -16,7 +16,6 @@
             --color-teal-500: rgba(33, 128, 141, 1);
             --color-teal-600: rgba(29, 116, 128, 1);
             --color-red-500: rgba(192, 21, 47, 1);
-            --color-orange-500: rgba(168, 75, 47, 1);
             --color-background: var(--color-cream-50);
             --color-surface: var(--color-cream-100);
             --color-text: var(--color-slate-900);
@@ -310,21 +309,6 @@
             background: rgba(94, 82, 64, 0.06);
         }
 
-        .badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-            background: rgba(33, 128, 141, 0.2);
-            color: var(--color-success);
-        }
-
-        .badge.pending {
-            background: rgba(255, 193, 7, 0.2);
-            color: rgba(255, 193, 7, 1);
-        }
-
         .empty-state {
             text-align: center;
             padding: 40px 20px;
@@ -359,7 +343,6 @@
             display: block;
         }
 
-        /* STILI PER RAGGRUPPAMENTO */
         .list-group {
             margin-bottom: 24px;
         }
@@ -502,13 +485,14 @@
 
     <script>
         const SUPABASE_URL = 'https://ucnftwqplawdxbwlxjah.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_I7mKsvBQoyAwHm2c3eU3Rg_Mym3uCxI';
-        const ADMIN_PASSWORD = '123stupido';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjbmZ0d3FwbGF3ZHhid2x4amFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4MDM2MDUsImV4cCI6MjA4MDM3OTYwNX0.qdsRKZH5j0pcxltSbC2TYck5axDq2RvQJgYKMRAqJiI';
+        const ADMIN_AUTH_URL = 'https://ucnftwqplawdxbwlxjah.supabase.co/functions/v1/admin-auth';
         
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
         let allRegistrations = [];
         let allLists = [];
+        let adminToken = null;
 
         // Controlla login al caricamento
         window.addEventListener('DOMContentLoaded', () => {
@@ -516,47 +500,90 @@
         });
 
         function checkLogin() {
-            const isLoggedIn = sessionStorage.getItem('adminLoggedIn');
+            adminToken = localStorage.getItem('adminToken');
             
-            if (isLoggedIn === 'true') {
-                document.getElementById('loginModal').classList.add('hidden');
-                document.getElementById('dashboard').style.display = 'block';
-                loadLists();
-                loadRegistrations();
-                setupRealtimeListeners();
+            if (adminToken) {
+                verifyToken();
             } else {
-                document.getElementById('loginModal').classList.remove('hidden');
-                document.getElementById('dashboard').style.display = 'none';
-                document.getElementById('passwordInput').focus();
+                showLoginModal();
             }
         }
 
-        function handleLogin(event) {
+        async function verifyToken() {
+            try {
+                const response = await fetch(ADMIN_AUTH_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'verify', token: adminToken })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById('loginModal').classList.add('hidden');
+                    document.getElementById('dashboard').style.display = 'block';
+                    loadLists();
+                    loadRegistrations();
+                    setupRealtimeListeners();
+                } else {
+                    localStorage.removeItem('adminToken');
+                    adminToken = null;
+                    showLoginModal();
+                }
+            } catch (error) {
+                console.error('Errore verifica token:', error);
+                showLoginModal();
+            }
+        }
+
+        function showLoginModal() {
+            document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('passwordInput').focus();
+        }
+
+        async function handleLogin(event) {
             event.preventDefault();
             const password = document.getElementById('passwordInput').value;
             const errorEl = document.getElementById('loginError');
 
-            if (password === ADMIN_PASSWORD) {
-                sessionStorage.setItem('adminLoggedIn', 'true');
-                document.getElementById('passwordInput').value = '';
-                errorEl.classList.remove('show');
-                checkLogin();
-            } else {
-                errorEl.textContent = '❌ Password non corretta!';
+            try {
+                const response = await fetch(ADMIN_AUTH_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'login', password: password })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    adminToken = result.token;
+                    localStorage.setItem('adminToken', adminToken);
+                    document.getElementById('passwordInput').value = '';
+                    errorEl.classList.remove('show');
+                    checkLogin();
+                } else {
+                    errorEl.textContent = '❌ ' + result.message;
+                    errorEl.classList.add('show');
+                    document.getElementById('passwordInput').value = '';
+                    document.getElementById('passwordInput').focus();
+                }
+            } catch (error) {
+                console.error('Errore login:', error);
+                errorEl.textContent = '❌ Errore di connessione';
                 errorEl.classList.add('show');
-                document.getElementById('passwordInput').value = '';
-                document.getElementById('passwordInput').focus();
             }
         }
 
         function logout() {
             if (confirm('Sei sicuro di voler uscire?')) {
-                sessionStorage.removeItem('adminLoggedIn');
+                localStorage.removeItem('adminToken');
+                adminToken = null;
                 checkLogin();
             }
         }
 
-        // Listener in tempo reale per liste
+        // Listener in tempo reale
         function setupRealtimeListeners() {
             const listChannel = supabase.channel('lists-changes')
                 .on(
@@ -715,7 +742,6 @@
                 html += `<div class="list-group">
                     <div class="list-header">📋 ${listName} (${totale})</div>`;
 
-                // PRESENTI
                 if (group.presenti.length > 0) {
                     html += `<div class="status-subheader">✓ Presenti (${group.presenti.length})</div>`;
                     group.presenti.forEach(reg => {
@@ -728,7 +754,6 @@
                     });
                 }
 
-                // IN ATTESA
                 if (group.inattesa.length > 0) {
                     html += `<div class="status-subheader">⏳ In attesa (${group.inattesa.length})</div>`;
                     group.inattesa.forEach(reg => {
@@ -757,35 +782,19 @@
             document.getElementById('percentagePresent').textContent = percentage + '%';
         }
 
-        // FORMATTAZIONE ORARIO: GG/MM HH:MM (senza secondi) - Usa created_at
-        function formatTimestamp(iso) {
-            if (!iso) return '';
-            try {
-                const date = new Date(iso);
-                const day = String(date.getDate()).padStart(2, '0');
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const hours = String(date.getHours()).padStart(2, '0');
-                const minutes = String(date.getMinutes()).padStart(2, '0');
-                return `${day}/${month} ${hours}:${minutes}`;
-            } catch (e) {
-                return iso;
-            }
-        }
-
         function exportCSV() {
             if (allRegistrations.length === 0) {
                 showError('Nessun dato da esportare');
                 return;
             }
 
-            const headers = ['Nome', 'Cognome', 'Email', 'Lista', 'Stato', 'Check-in', 'Registrato'];
+            const headers = ['Nome', 'Cognome', 'Email', 'Lista', 'Stato', 'Registrato'];
             const rows = allRegistrations.map(r => [
                 r.firstname || '',
                 r.lastname || '',
                 r.email,
                 r.list || '',
                 r.checkedin ? 'Presente' : 'In attesa',
-                r.checkedinat || '',
                 formatTimestamp(r.created_at)
             ]);
 
@@ -803,7 +812,7 @@
         }
 
         async function resetAllCheckins() {
-            if (confirm('Sei sicuro? Tutti i dati verranno eliminati permanentemente. Il QR code sarà rigenerato al prossimo evento.')) {
+            if (confirm('Sei sicuro? Tutti i dati verranno eliminati permanentemente.')) {
                 try {
                     const { error } = await supabase
                         .from('registrations')
@@ -812,12 +821,26 @@
 
                     if (error) throw error;
                     
-                    showSuccess('Tutti i dati eliminati! Database pulito per il prossimo evento.');
+                    showSuccess('Tutti i dati eliminati!');
                     loadRegistrations();
                 } catch (error) {
-                    console.error('Errore reset database:', error);
+                    console.error('Errore reset:', error);
                     showError('Errore: ' + error.message);
                 }
+            }
+        }
+
+        function formatTimestamp(iso) {
+            if (!iso) return '';
+            try {
+                const date = new Date(iso);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${day}/${month} ${hours}:${minutes}`;
+            } catch (e) {
+                return iso;
             }
         }
 
