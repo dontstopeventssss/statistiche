@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DON'T STOP - Dashboard Admin</title>
-    <!-- Supabase Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
@@ -486,104 +485,58 @@
     <script>
         const SUPABASE_URL = 'https://ucnftwqplawdxbwlxjah.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjbmZ0d3FwbGF3ZHhid2x4amFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4MDM2MDUsImV4cCI6MjA4MDM3OTYwNX0.qdsRKZH5j0pcxltSbC2TYck5axDq2RvQJgYKMRAqJiI';
-        const ADMIN_AUTH_URL = 'https://ucnftwqplawdxbwlxjah.supabase.co/functions/v1/admin-auth';
+        const ADMIN_PASSWORD = '635285';
         
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
         let allRegistrations = [];
         let allLists = [];
-        let adminToken = null;
 
-        // Controlla login al caricamento
         window.addEventListener('DOMContentLoaded', () => {
             checkLogin();
         });
 
         function checkLogin() {
-            adminToken = localStorage.getItem('adminToken');
+            const isLoggedIn = sessionStorage.getItem('adminLoggedIn');
             
-            if (adminToken) {
-                verifyToken();
+            if (isLoggedIn === 'true') {
+                document.getElementById('loginModal').classList.add('hidden');
+                document.getElementById('dashboard').style.display = 'block';
+                loadLists();
+                loadRegistrations();
+                setupRealtimeListeners();
             } else {
-                showLoginModal();
+                document.getElementById('loginModal').classList.remove('hidden');
+                document.getElementById('dashboard').style.display = 'none';
+                document.getElementById('passwordInput').focus();
             }
         }
 
-        async function verifyToken() {
-            try {
-                const response = await fetch(ADMIN_AUTH_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'verify', token: adminToken })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    document.getElementById('loginModal').classList.add('hidden');
-                    document.getElementById('dashboard').style.display = 'block';
-                    loadLists();
-                    loadRegistrations();
-                    setupRealtimeListeners();
-                } else {
-                    localStorage.removeItem('adminToken');
-                    adminToken = null;
-                    showLoginModal();
-                }
-            } catch (error) {
-                console.error('Errore verifica token:', error);
-                showLoginModal();
-            }
-        }
-
-        function showLoginModal() {
-            document.getElementById('loginModal').classList.remove('hidden');
-            document.getElementById('dashboard').style.display = 'none';
-            document.getElementById('passwordInput').focus();
-        }
-
-        async function handleLogin(event) {
+        function handleLogin(event) {
             event.preventDefault();
             const password = document.getElementById('passwordInput').value;
             const errorEl = document.getElementById('loginError');
 
-            try {
-                const response = await fetch(ADMIN_AUTH_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'login', password: password })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    adminToken = result.token;
-                    localStorage.setItem('adminToken', adminToken);
-                    document.getElementById('passwordInput').value = '';
-                    errorEl.classList.remove('show');
-                    checkLogin();
-                } else {
-                    errorEl.textContent = '❌ ' + result.message;
-                    errorEl.classList.add('show');
-                    document.getElementById('passwordInput').value = '';
-                    document.getElementById('passwordInput').focus();
-                }
-            } catch (error) {
-                console.error('Errore login:', error);
-                errorEl.textContent = '❌ Errore di connessione';
+            if (password === ADMIN_PASSWORD) {
+                sessionStorage.setItem('adminLoggedIn', 'true');
+                document.getElementById('passwordInput').value = '';
+                errorEl.classList.remove('show');
+                checkLogin();
+            } else {
+                errorEl.textContent = '❌ Password non corretta!';
                 errorEl.classList.add('show');
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordInput').focus();
             }
         }
 
         function logout() {
             if (confirm('Sei sicuro di voler uscire?')) {
-                localStorage.removeItem('adminToken');
-                adminToken = null;
+                sessionStorage.removeItem('adminLoggedIn');
                 checkLogin();
             }
         }
 
-        // Listener in tempo reale
         function setupRealtimeListeners() {
             const listChannel = supabase.channel('lists-changes')
                 .on(
@@ -719,7 +672,6 @@
                 return;
             }
 
-            // Raggruppa per lista
             const listGroups = {};
             allRegistrations.forEach(reg => {
                 const listName = reg.list || 'Senza Lista';
@@ -733,7 +685,6 @@
                 }
             });
 
-            // Crea HTML raggruppato
             let html = '';
             Object.keys(listGroups).sort().forEach(listName => {
                 const group = listGroups[listName];
